@@ -17,6 +17,7 @@ import { ContentMixCard } from "@/components/analytics/ContentMixCard";
 import { QuizPerformanceCard } from "@/components/analytics/QuizPerformanceCard";
 import { VelocityCard } from "@/components/analytics/VelocityCard";
 import { CourseBreakdownTable } from "@/components/analytics/CourseBreakdownTable";
+import { LearningConsistencyCalendar } from "@/components/analytics/LearningConsistencyCalendar";
 
 export default function LearningAnalytics() {
   const { token } = useAuthStore();
@@ -54,6 +55,27 @@ export default function LearningAnalytics() {
       }),
     [detailsData, lessonsByVersion],
   );
+
+  const courseNames = useMemo(() => {
+    const names: Record<string, string> = {};
+    const toId = (value: any): string => {
+      if (value == null) return "";
+      if (typeof value === "string") return value;
+      if (value?.buffer?.data) return bufferToHex(value);
+      if (value?._id != null) return toId(value._id);
+      return String(value);
+    };
+
+    ((detailsData as any)?.enrollments || []).forEach((entry: any) => {
+      const courseId = toId(entry.courseId ?? entry.course?._id);
+      const versionId = toId(entry.courseVersionId ?? entry.versionId);
+      const name = entry.course?.name ?? entry.courseName;
+      if (courseId && versionId && name) {
+        names[courseId + ":" + versionId] = name;
+      }
+    });
+    return names;
+  }, [detailsData]);
 
   const contentMix = useMemo(() => aggregateContentMix(courses), [courses]);
   const avgQuiz = useMemo(() => averageQuizPercent(courses), [courses]);
@@ -98,6 +120,8 @@ export default function LearningAnalytics() {
             <StatCard tone="violet" icon={<GraduationCap className="h-5 w-5" />} value={`${completedCourses}/${totalCourses}`} label="Courses Completed" sublabel="Fully finished" />
             <StatCard tone="amber" icon={<BookOpen className="h-5 w-5" />} value={`${completedItems}/${totalItems}`} label="Lessons Completed" sublabel="Items finished" />
           </div>
+
+          <LearningConsistencyCalendar courseNames={courseNames} />
 
           {/* Pace + content mix + quiz performance */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

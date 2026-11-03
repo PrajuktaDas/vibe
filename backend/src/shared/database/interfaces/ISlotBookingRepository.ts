@@ -1,5 +1,5 @@
 import {ClientSession} from 'mongodb';
-import {ISlotBooking, SlotBookingStatus} from '../../interfaces/models.js';
+import {ISlotBooking, IWatchTime, SlotBookingStatus} from '../../interfaces/models.js';
 
 /** A watch-time session reduced to the fields the fulfillment evaluator needs. */
 export interface IWatchSession {
@@ -36,6 +36,22 @@ export interface ISlotBookingRepository {
     date?: string,
     session?: ClientSession,
   ): Promise<ISlotBooking[]>;
+
+  /** All non-cancelled bookings for one student in an inclusive IST date range. */
+  findCalendarBookingsForStudent(
+    userId: string,
+    fromDate: string,
+    toDate: string,
+    session?: ClientSession,
+  ): Promise<ISlotBooking[]>;
+
+  /** Genuine watch-time sessions for one student overlapping a UTC instant range. */
+  findWatchSessionsForStudentInRange(
+    userId: string,
+    startUTC: Date,
+    endUTC: Date,
+    session?: ClientSession,
+  ): Promise<IWatchTime[]>;
 
   /** Count active bookings in a given slot on a given date (capacity check). */
   countActiveInSlot(
