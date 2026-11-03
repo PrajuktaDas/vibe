@@ -352,8 +352,9 @@ export function buildLearningCalendar(input: {
     day.utilisedBookedMinutes = Math.round(day.utilisedBookedMinutes);
     day.nonBookedLearningMinutes = Math.round(day.nonBookedLearningMinutes);
     day.additionalLearningMinutes = Math.round(day.additionalLearningMinutes);
-    day.totalLearningMinutes = day.utilisedBookedMinutes + day.nonBookedLearningMinutes;
-    day.actualLearningMinutes = day.totalLearningMinutes + day.additionalLearningMinutes;
+    day.totalLearningMinutes =
+      day.utilisedBookedMinutes + day.nonBookedLearningMinutes + day.additionalLearningMinutes;
+    day.actualLearningMinutes = day.totalLearningMinutes;
     day.bookedUtilizationPct = day.bookedMinutes > 0
       ? Math.min(100, Math.round((day.utilisedBookedMinutes / day.bookedMinutes) * 100))
       : 0;
