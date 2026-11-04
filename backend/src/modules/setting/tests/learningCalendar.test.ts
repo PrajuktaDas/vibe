@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import {describe, expect, it} from 'vitest';
 import {SlotBookingStatus} from '#shared/interfaces/models.js';
 import {buildLearningCalendar} from '../services/learningCalendar.js';
