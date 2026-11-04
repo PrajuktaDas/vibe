@@ -108,7 +108,8 @@ class SlotBookingController {
 
   @OpenAPI({
     summary: 'Cancel a booking',
-    description: 'A student cancels one of their own bookings (used to re-book).',
+    description:
+      'A student cancels one of their own bookings (used to re-book).',
   })
   @Authorized()
   @Post('/cancel')
@@ -166,9 +167,35 @@ class SlotBookingController {
   }
 
   @OpenAPI({
+    summary: "Get the student's learning consistency calendar",
+    description:
+      'Returns daily booked-slot utilisation and actual learning time for courses that do not require slot booking. Uses existing booking and watch-time records.',
+  })
+  @Authorized()
+  @Get('/my/calendar')
+  @HttpCode(200)
+  async myLearningCalendar(
+    @CurrentUser() user: IUser,
+    @QueryParam('from') from?: string,
+    @QueryParam('to') to?: string,
+  ): Promise<BookingResponse> {
+    if (!from || !to) {
+      throw new BadRequestError(
+        'Both from and to are required as YYYY-MM-DD IST dates.',
+      );
+    }
+    const data = await this.slotBookingService.getLearningCalendar(
+      user._id.toString(),
+      from,
+      to,
+    );
+    return {success: true, data};
+  }
+
+  @OpenAPI({
     summary: "The student's awarded extra-bookings pool",
     description:
-      "Returns how many extra bookings the calling student may still make beyond their daily allowance (instructor-awarded, consumable). Used to keep the booking action enabled.",
+      'Returns how many extra bookings the calling student may still make beyond their daily allowance (instructor-awarded, consumable). Used to keep the booking action enabled.',
   })
   @Authorized()
   @Get('/my/extra-bookings/course/:courseId/version/:courseVersionId')
@@ -189,9 +216,7 @@ class SlotBookingController {
         );
       return {success: true, data: {extraBookings}};
     } catch (error) {
-      throw new InternalServerError(
-        `Failed to get extra bookings: ${error}`,
-      );
+      throw new InternalServerError(`Failed to get extra bookings: ${error}`);
     }
   }
 

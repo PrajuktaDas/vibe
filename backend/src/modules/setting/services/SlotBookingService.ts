@@ -19,6 +19,12 @@ import {
 import {GLOBAL_TYPES} from '#root/types.js';
 import {EnrollmentService} from '#users/services/EnrollmentService.js';
 import {USERS_TYPES} from '#users/types.js';
+import {
+  addISTDays,
+  buildLearningCalendar,
+  getISTMidnightUTC,
+  isValidISTDateKey,
+} from './learningCalendar.js';
 
 /**
  * Books and manages per-day slot bookings (the commitment-scheme records).
@@ -148,7 +154,7 @@ export class SlotBookingService extends BaseService {
     cohortId?: string,
     targetDate?: string,
   ): Promise<ISlotBooking> {
-    return this._withTransaction(async (session) => {
+    return this._withTransaction(async session => {
       const timeslots = await this.settingsRepo.readTimeslotsSettings(
         courseId,
         courseVersionId,
@@ -366,7 +372,7 @@ export class SlotBookingService extends BaseService {
    * and counts as an unused slot, which the fulfilment job marks UNFULFILLED.
    */
   async cancelBooking(userId: string, bookingId: string): Promise<boolean> {
-    return this._withTransaction(async (session) => {
+    return this._withTransaction(async session => {
       const booking = await this.slotBookingRepo.findById(bookingId, session);
       if (!booking) {
         throw new NotFoundError('Booking not found.');
@@ -378,8 +384,7 @@ export class SlotBookingService extends BaseService {
       if (booking.date && booking.from) {
         const startMs = this.slotCloseMs(booking.date, booking.from);
         const cancelDeadlineMs =
-          startMs -
-          SlotBookingService.CANCEL_CUTOFF_HOURS * 60 * 60 * 1000;
+          startMs - SlotBookingService.CANCEL_CUTOFF_HOURS * 60 * 60 * 1000;
         if (this.getISTNowMs() >= cancelDeadlineMs) {
           throw new BadRequestError(
             `Bookings can only be cancelled up to ${SlotBookingService.CANCEL_CUTOFF_HOURS} hour before the slot starts. ` +
@@ -388,6 +393,67 @@ export class SlotBookingService extends BaseService {
         }
       }
       return this.slotBookingRepo.cancelBooking(bookingId, session);
+    });
+  }
+
+  /**
+   * Read-only calendar analytics for the authenticated student. It reuses
+   * existing slotBookings and watchTime records; it does not create tracking data.
+   */
+  async getLearningCalendar(userId: string, from: string, to: string) {
+    if (!isValidISTDateKey(from) || !isValidISTDateKey(to) || from > to) {
+      throw new BadRequestError(
+        'from and to must be valid IST dates in YYYY-MM-DD format, with from <= to.',
+      );
+    }
+
+    const startMs = getISTMidnightUTC(from);
+    const endMs = getISTMidnightUTC(addISTDays(to, 1));
+    const rangeDays = (endMs - startMs) / (24 * 60 * 60 * 1000);
+    if (rangeDays > 370) {
+      throw new BadRequestError(
+        'The learning calendar range cannot exceed 370 days.',
+      );
+    }
+
+    const [bookings, sessions] = await Promise.all([
+      this.slotBookingRepo.findCalendarBookingsForStudent(userId, from, to),
+      this.slotBookingRepo.findWatchSessionsForStudentInRange(
+        userId,
+        new Date(startMs),
+        new Date(endMs),
+      ),
+    ]);
+
+    const coursePairs = new Map<
+      string,
+      {courseId: string; courseVersionId: string}
+    >();
+    for (const record of [...bookings, ...sessions]) {
+      const courseId = String(record.courseId);
+      const courseVersionId = String(record.courseVersionId);
+      coursePairs.set(courseId + ':' + courseVersionId, {
+        courseId,
+        courseVersionId,
+      });
+    }
+
+    const bookingFlags = await Promise.all(
+      [...coursePairs.entries()].map(async ([key, pair]) => {
+        const settings = await this.settingsRepo.readTimeslotsSettings(
+          pair.courseId,
+          pair.courseVersionId,
+        );
+        return [key, settings?.isActive === true] as const;
+      }),
+    );
+
+    return buildLearningCalendar({
+      bookings,
+      sessions,
+      bookingRequiredByCourse: Object.fromEntries(bookingFlags),
+      from,
+      to,
     });
   }
 

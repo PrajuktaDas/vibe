@@ -7,10 +7,7 @@ import {
   IWatchTime,
   SlotBookingStatus,
 } from '#shared/interfaces/models.js';
-import {
-  ISlotBookingRepository,
-  IWatchSession,
-} from '#shared/database/index.js';
+import {ISlotBookingRepository, IWatchSession} from '#shared/database/index.js';
 import {GLOBAL_TYPES} from '#root/types.js';
 
 /** Accepts a string, ObjectId, or serialized object/buffer representation and returns an ObjectId. */
@@ -133,6 +130,52 @@ export class SlotBookingRepository implements ISlotBookingRepository {
     return this.slotBookingsCollection.find(query as any, {session}).toArray();
   }
 
+  async findCalendarBookingsForStudent(
+    userId: string,
+    fromDate: string,
+    toDate: string,
+    session?: ClientSession,
+  ): Promise<ISlotBooking[]> {
+    await this.init();
+    return this.slotBookingsCollection
+      .find(
+        {
+          userId: oid(userId),
+          date: {$gte: fromDate, $lte: toDate},
+          status: {$ne: SlotBookingStatus.CANCELLED},
+          isDeleted: {$ne: true},
+        } as any,
+        {session},
+      )
+      .sort({date: 1, from: 1})
+      .toArray();
+  }
+
+  async findWatchSessionsForStudentInRange(
+    userId: string,
+    startUTC: Date,
+    endUTC: Date,
+    session?: ClientSession,
+  ): Promise<IWatchTime[]> {
+    await this.init();
+    return this.watchTimeCollection
+      .find(
+        {
+          userId: oid(userId),
+          startTime: {$lt: endUTC},
+          isBulk: {$ne: true},
+          isDeleted: {$ne: true},
+          $or: [
+            {endTime: {$gte: startUTC}},
+            {lastSeenAt: {$gte: startUTC}},
+            {startTime: {$gte: startUTC}},
+          ],
+        } as any,
+        {session},
+      )
+      .toArray();
+  }
+
   async countActiveInSlot(
     courseId: string,
     courseVersionId: string,
@@ -179,7 +222,7 @@ export class SlotBookingRepository implements ISlotBookingRepository {
         {session},
       )
       .toArray();
-    return result.length > 0 ? (result[0] as any).total ?? 0 : 0;
+    return result.length > 0 ? ((result[0] as any).total ?? 0) : 0;
   }
 
   /**
@@ -215,7 +258,7 @@ export class SlotBookingRepository implements ISlotBookingRepository {
         {session},
       )
       .toArray();
-    return result.length > 0 ? (result[0] as any).total ?? 0 : 0;
+    return result.length > 0 ? ((result[0] as any).total ?? 0) : 0;
   }
 
   async cancelBooking(
