@@ -104,6 +104,8 @@ export default function LearningAnalytics() {
         }
       />
 
+      <LearningConsistencyCalendar courseNames={courseNames} />
+
       {isLoading ? (
         <AnalyticsSkeleton />
       ) : courses.length === 0 ? (
@@ -120,8 +122,6 @@ export default function LearningAnalytics() {
             <StatCard tone="violet" icon={<GraduationCap className="h-5 w-5" />} value={`${completedCourses}/${totalCourses}`} label="Courses Completed" sublabel="Fully finished" />
             <StatCard tone="amber" icon={<BookOpen className="h-5 w-5" />} value={`${completedItems}/${totalItems}`} label="Lessons Completed" sublabel="Items finished" />
           </div>
-
-          <LearningConsistencyCalendar courseNames={courseNames} />
 
           {/* Pace + content mix + quiz performance */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
