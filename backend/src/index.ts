@@ -78,13 +78,25 @@ if (NODE_ENV === 'production' || NODE_ENV === 'staging') {
   Sentry.setupExpressErrorHandler(app);
 }
 
-const database = getContainer().get<MongoDatabase>(GLOBAL_TYPES.Database);
-await database.connect();
+const skipDatabase = process.env.SKIP_DB_CONNECTION === 'true';
 
-// Start server
+if (skipDatabase) {
+  console.warn(
+    '[VIBE LOCAL MODE] MongoDB connection is disabled. Database-backed routes will not be available; use /health to verify the API process.',
+  );
+} else {
+  const database = getContainer().get<MongoDatabase>(GLOBAL_TYPES.Database);
+  await database.connect();
+}
+
+// Start server even when local development intentionally skips MongoDB.
 useExpressServer(app, moduleOptions);
 
 app.listen(appConfig.port, () => {
   printStartupSummary();
-  startCron();
+  if (!skipDatabase) {
+    startCron();
+  } else {
+    console.warn('[VIBE LOCAL MODE] Background jobs are disabled because MongoDB is unavailable.');
+  }
 });
