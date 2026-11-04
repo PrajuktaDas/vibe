@@ -1,7 +1,4 @@
-import type {
-  ISlotBooking,
-  IWatchTime,
-} from '#shared/interfaces/models.js';
+import type {ISlotBooking, IWatchTime} from '#shared/interfaces/models.js';
 
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
@@ -98,7 +95,8 @@ function getISTDateKey(instant: Date): string {
     month: '2-digit',
     day: '2-digit',
   }).formatToParts(instant);
-  const part = (type: string) => parts.find(item => item.type === type)?.value ?? '';
+  const part = (type: string) =>
+    parts.find(item => item.type === type)?.value ?? '';
   return part('year') + '-' + part('month') + '-' + part('day');
 }
 
@@ -149,7 +147,10 @@ function intervalMinutes(intervals: Interval[]): number {
   );
 }
 
-function intersectionMinutes(sessions: Interval[], windows: Interval[]): number {
+function intersectionMinutes(
+  sessions: Interval[],
+  windows: Interval[],
+): number {
   const left = mergeIntervals(sessions);
   const right = mergeIntervals(windows);
   let i = 0;
@@ -157,7 +158,8 @@ function intersectionMinutes(sessions: Interval[], windows: Interval[]): number 
   let milliseconds = 0;
 
   while (i < left.length && j < right.length) {
-    const overlap = Math.min(left[i].end, right[j].end) -
+    const overlap =
+      Math.min(left[i].end, right[j].end) -
       Math.max(left[i].start, right[j].start);
     if (overlap > 0) milliseconds += overlap;
 
@@ -168,7 +170,9 @@ function intersectionMinutes(sessions: Interval[], windows: Interval[]): number 
   return milliseconds / 60_000;
 }
 
-function splitIntervalsByISTDay(intervals: Interval[]): Map<string, Interval[]> {
+function splitIntervalsByISTDay(
+  intervals: Interval[],
+): Map<string, Interval[]> {
   const result = new Map<string, Interval[]>();
 
   for (const interval of mergeIntervals(intervals)) {
@@ -187,11 +191,16 @@ function splitIntervalsByISTDay(intervals: Interval[]): Map<string, Interval[]> 
   return result;
 }
 
-function intensityForDay(bookedUtilizationPct: number, nonBookedMinutes: number): number {
+function intensityForDay(
+  bookedUtilizationPct: number,
+  nonBookedMinutes: number,
+): number {
   let bookedLevel = 0;
   if (bookedUtilizationPct > 0 && bookedUtilizationPct < 50) bookedLevel = 1;
-  else if (bookedUtilizationPct >= 50 && bookedUtilizationPct < 75) bookedLevel = 2;
-  else if (bookedUtilizationPct >= 75 && bookedUtilizationPct < 100) bookedLevel = 3;
+  else if (bookedUtilizationPct >= 50 && bookedUtilizationPct < 75)
+    bookedLevel = 2;
+  else if (bookedUtilizationPct >= 75 && bookedUtilizationPct < 100)
+    bookedLevel = 3;
   else if (bookedUtilizationPct >= 100) bookedLevel = 4;
 
   let nonBookedLevel = 0;
@@ -239,10 +248,13 @@ export function buildLearningCalendar(input: {
     const courseVersionId = String(session.courseVersionId);
     const key = courseId + ':' + courseVersionId;
     const start = new Date(session.startTime).getTime();
-    const end = new Date(session.endTime ?? session.lastSeenAt ?? session.startTime).getTime();
+    const end = new Date(
+      session.endTime ?? session.lastSeenAt ?? session.startTime,
+    ).getTime();
 
     // An open or abandoned session with no last ping has no measurable duration.
-    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start)
+      continue;
     const intervals = sessionIntervalsByCourse.get(key) ?? [];
     intervals.push({start, end});
     sessionIntervalsByCourse.set(key, intervals);
@@ -250,7 +262,8 @@ export function buildLearningCalendar(input: {
 
   const bookingEntriesByCourse = new Map<string, BookingEntry[]>();
   for (const booking of bookings) {
-    const key = String(booking.courseId) + ':' + String(booking.courseVersionId);
+    const key =
+      String(booking.courseId) + ':' + String(booking.courseVersionId);
     const entries = bookingEntriesByCourse.get(key) ?? [];
     entries.push(bookingWindow(booking));
     bookingEntriesByCourse.set(key, entries);
@@ -262,10 +275,13 @@ export function buildLearningCalendar(input: {
   ]);
 
   for (const key of courseKeys) {
-    const sessionIntervals = mergeIntervals(sessionIntervalsByCourse.get(key) ?? []);
+    const sessionIntervals = mergeIntervals(
+      sessionIntervalsByCourse.get(key) ?? [],
+    );
     const sessionsByDate = splitIntervalsByISTDay(sessionIntervals);
     const bookingEntries = bookingEntriesByCourse.get(key) ?? [];
-    const requiresBooking = bookingRequiredByCourse[key] === true || bookingEntries.length > 0;
+    const requiresBooking =
+      bookingRequiredByCourse[key] === true || bookingEntries.length > 0;
 
     if (!requiresBooking) {
       for (const [date, intervals] of sessionsByDate) {
@@ -305,9 +321,10 @@ export function buildLearningCalendar(input: {
           entry.bookedMinutes,
           intersectionMinutes(sessionIntervals, [entry.window]),
         );
-        const pct = entry.bookedMinutes > 0
-          ? Math.min(100, Math.round((utilised / entry.bookedMinutes) * 100))
-          : 0;
+        const pct =
+          entry.bookedMinutes > 0
+            ? Math.min(100, Math.round((utilised / entry.bookedMinutes) * 100))
+            : 0;
 
         startDay.bookings.push({
           bookingId: String(entry.booking._id ?? ''),
@@ -331,8 +348,12 @@ export function buildLearningCalendar(input: {
     for (const date of activityDates) {
       const day = days.get(date);
       if (!day) continue;
-      const sessionIntervalsForDay = mergeIntervals(sessionsByDate.get(date) ?? []);
-      const bookingWindowsForDay = mergeIntervals(bookingSegmentsByDate.get(date) ?? []);
+      const sessionIntervalsForDay = mergeIntervals(
+        sessionsByDate.get(date) ?? [],
+      );
+      const bookingWindowsForDay = mergeIntervals(
+        bookingSegmentsByDate.get(date) ?? [],
+      );
       const bookedMinutes = bookedMinutesByDate.get(date) ?? 0;
       const utilised = Math.min(
         bookedMinutes,
@@ -346,18 +367,26 @@ export function buildLearningCalendar(input: {
     }
   }
 
-  const orderedDays = [...days.values()].sort((a, b) => a.date.localeCompare(b.date));
+  const orderedDays = [...days.values()].sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
   for (const day of orderedDays) {
     day.bookedMinutes = Math.round(day.bookedMinutes);
     day.utilisedBookedMinutes = Math.round(day.utilisedBookedMinutes);
     day.nonBookedLearningMinutes = Math.round(day.nonBookedLearningMinutes);
     day.additionalLearningMinutes = Math.round(day.additionalLearningMinutes);
     day.totalLearningMinutes =
-      day.utilisedBookedMinutes + day.nonBookedLearningMinutes + day.additionalLearningMinutes;
+      day.utilisedBookedMinutes +
+      day.nonBookedLearningMinutes +
+      day.additionalLearningMinutes;
     day.actualLearningMinutes = day.totalLearningMinutes;
-    day.bookedUtilizationPct = day.bookedMinutes > 0
-      ? Math.min(100, Math.round((day.utilisedBookedMinutes / day.bookedMinutes) * 100))
-      : 0;
+    day.bookedUtilizationPct =
+      day.bookedMinutes > 0
+        ? Math.min(
+            100,
+            Math.round((day.utilisedBookedMinutes / day.bookedMinutes) * 100),
+          )
+        : 0;
     day.intensityLevel = intensityForDay(
       day.bookedUtilizationPct,
       day.nonBookedLearningMinutes,
@@ -366,7 +395,10 @@ export function buildLearningCalendar(input: {
     day.nonBookedCourses.sort((a, b) => b.learningMinutes - a.learningMinutes);
   }
 
-  const totalBookedMinutes = orderedDays.reduce((sum, day) => sum + day.bookedMinutes, 0);
+  const totalBookedMinutes = orderedDays.reduce(
+    (sum, day) => sum + day.bookedMinutes,
+    0,
+  );
   const totalUtilisedBookedMinutes = orderedDays.reduce(
     (sum, day) => sum + day.utilisedBookedMinutes,
     0,
@@ -375,7 +407,8 @@ export function buildLearningCalendar(input: {
     (sum, day) => sum + day.nonBookedLearningMinutes,
     0,
   );
-  const totalLearningMinutes = totalUtilisedBookedMinutes + totalNonBookedLearningMinutes;
+  const totalLearningMinutes =
+    totalUtilisedBookedMinutes + totalNonBookedLearningMinutes;
   const totalActualLearningMinutes = orderedDays.reduce(
     (sum, day) => sum + day.actualLearningMinutes,
     0,
@@ -404,9 +437,10 @@ export function buildLearningCalendar(input: {
       totalLearningMinutes,
       totalActualLearningMinutes,
       activeDays,
-      averageSlotUtilizationPct: totalBookedMinutes > 0
-        ? Math.round((totalUtilisedBookedMinutes / totalBookedMinutes) * 100)
-        : null,
+      averageSlotUtilizationPct:
+        totalBookedMinutes > 0
+          ? Math.round((totalUtilisedBookedMinutes / totalBookedMinutes) * 100)
+          : null,
       currentStreak,
     },
   };

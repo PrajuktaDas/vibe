@@ -7,10 +7,7 @@ import {
   IWatchTime,
   SlotBookingStatus,
 } from '#shared/interfaces/models.js';
-import {
-  ISlotBookingRepository,
-  IWatchSession,
-} from '#shared/database/index.js';
+import {ISlotBookingRepository, IWatchSession} from '#shared/database/index.js';
 import {GLOBAL_TYPES} from '#root/types.js';
 
 /** Accepts a string, ObjectId, or serialized object/buffer representation and returns an ObjectId. */
@@ -225,7 +222,7 @@ export class SlotBookingRepository implements ISlotBookingRepository {
         {session},
       )
       .toArray();
-    return result.length > 0 ? (result[0] as any).total ?? 0 : 0;
+    return result.length > 0 ? ((result[0] as any).total ?? 0) : 0;
   }
 
   /**
@@ -261,7 +258,7 @@ export class SlotBookingRepository implements ISlotBookingRepository {
         {session},
       )
       .toArray();
-    return result.length > 0 ? (result[0] as any).total ?? 0 : 0;
+    return result.length > 0 ? ((result[0] as any).total ?? 0) : 0;
   }
 
   async cancelBooking(

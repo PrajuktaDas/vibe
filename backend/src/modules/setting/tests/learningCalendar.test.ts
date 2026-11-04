@@ -22,7 +22,11 @@ const booking = (overrides: Record<string, unknown> = {}) =>
     ...overrides,
   }) as any;
 
-const session = (start: string, end: string, overrides: Record<string, unknown> = {}) =>
+const session = (
+  start: string,
+  end: string,
+  overrides: Record<string, unknown> = {},
+) =>
   ({
     userId: 'student-1',
     courseId: 'course-1',
@@ -37,7 +41,9 @@ describe('buildLearningCalendar', () => {
   it('maps full booked-slot utilisation to the highest intensity', () => {
     const result = buildLearningCalendar({
       bookings: [booking()],
-      sessions: [session('2026-11-03T08:30:00.000Z', '2026-11-03T10:30:00.000Z')],
+      sessions: [
+        session('2026-11-03T08:30:00.000Z', '2026-11-03T10:30:00.000Z'),
+      ],
       bookingRequiredByCourse: {'course-1:version-1': true},
       from: '2026-11-03',
       to: '2026-11-03',
@@ -52,7 +58,9 @@ describe('buildLearningCalendar', () => {
   it('maps 25 percent booked utilisation to the lightest active intensity', () => {
     const result = buildLearningCalendar({
       bookings: [booking()],
-      sessions: [session('2026-11-03T08:30:00.000Z', '2026-11-03T09:00:00.000Z')],
+      sessions: [
+        session('2026-11-03T08:30:00.000Z', '2026-11-03T09:00:00.000Z'),
+      ],
       bookingRequiredByCourse: {'course-1:version-1': true},
       from: '2026-11-03',
       to: '2026-11-03',
@@ -65,7 +73,9 @@ describe('buildLearningCalendar', () => {
   it('uses actual learning duration for courses without slot booking', () => {
     const result = buildLearningCalendar({
       bookings: [],
-      sessions: [session('2026-11-03T08:30:00.000Z', '2026-11-03T09:15:00.000Z')],
+      sessions: [
+        session('2026-11-03T08:30:00.000Z', '2026-11-03T09:15:00.000Z'),
+      ],
       bookingRequiredByCourse: {'course-1:version-1': false},
       from: '2026-11-03',
       to: '2026-11-03',

@@ -108,7 +108,8 @@ class SlotBookingController {
 
   @OpenAPI({
     summary: 'Cancel a booking',
-    description: 'A student cancels one of their own bookings (used to re-book).',
+    description:
+      'A student cancels one of their own bookings (used to re-book).',
   })
   @Authorized()
   @Post('/cancel')
@@ -179,7 +180,9 @@ class SlotBookingController {
     @QueryParam('to') to?: string,
   ): Promise<BookingResponse> {
     if (!from || !to) {
-      throw new BadRequestError('Both from and to are required as YYYY-MM-DD IST dates.');
+      throw new BadRequestError(
+        'Both from and to are required as YYYY-MM-DD IST dates.',
+      );
     }
     const data = await this.slotBookingService.getLearningCalendar(
       user._id.toString(),
@@ -192,7 +195,7 @@ class SlotBookingController {
   @OpenAPI({
     summary: "The student's awarded extra-bookings pool",
     description:
-      "Returns how many extra bookings the calling student may still make beyond their daily allowance (instructor-awarded, consumable). Used to keep the booking action enabled.",
+      'Returns how many extra bookings the calling student may still make beyond their daily allowance (instructor-awarded, consumable). Used to keep the booking action enabled.',
   })
   @Authorized()
   @Get('/my/extra-bookings/course/:courseId/version/:courseVersionId')
@@ -213,9 +216,7 @@ class SlotBookingController {
         );
       return {success: true, data: {extraBookings}};
     } catch (error) {
-      throw new InternalServerError(
-        `Failed to get extra bookings: ${error}`,
-      );
+      throw new InternalServerError(`Failed to get extra bookings: ${error}`);
     }
   }
 

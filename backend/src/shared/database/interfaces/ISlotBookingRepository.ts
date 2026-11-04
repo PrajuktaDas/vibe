@@ -1,5 +1,9 @@
 import {ClientSession} from 'mongodb';
-import {ISlotBooking, IWatchTime, SlotBookingStatus} from '../../interfaces/models.js';
+import {
+  ISlotBooking,
+  IWatchTime,
+  SlotBookingStatus,
+} from '../../interfaces/models.js';
 
 /** A watch-time session reduced to the fields the fulfillment evaluator needs. */
 export interface IWatchSession {
@@ -88,10 +92,7 @@ export interface ISlotBookingRepository {
   ): Promise<number>;
 
   /** Mark a booking cancelled (student re-book or instructor removal). */
-  cancelBooking(
-    bookingId: string,
-    session?: ClientSession,
-  ): Promise<boolean>;
+  cancelBooking(bookingId: string, session?: ClientSession): Promise<boolean>;
 
   /**
    * Still-BOOKED bookings whose study day is on or before `onOrBeforeDate`

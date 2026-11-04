@@ -154,7 +154,7 @@ export class SlotBookingService extends BaseService {
     cohortId?: string,
     targetDate?: string,
   ): Promise<ISlotBooking> {
-    return this._withTransaction(async (session) => {
+    return this._withTransaction(async session => {
       const timeslots = await this.settingsRepo.readTimeslotsSettings(
         courseId,
         courseVersionId,
@@ -372,7 +372,7 @@ export class SlotBookingService extends BaseService {
    * and counts as an unused slot, which the fulfilment job marks UNFULFILLED.
    */
   async cancelBooking(userId: string, bookingId: string): Promise<boolean> {
-    return this._withTransaction(async (session) => {
+    return this._withTransaction(async session => {
       const booking = await this.slotBookingRepo.findById(bookingId, session);
       if (!booking) {
         throw new NotFoundError('Booking not found.');
@@ -384,8 +384,7 @@ export class SlotBookingService extends BaseService {
       if (booking.date && booking.from) {
         const startMs = this.slotCloseMs(booking.date, booking.from);
         const cancelDeadlineMs =
-          startMs -
-          SlotBookingService.CANCEL_CUTOFF_HOURS * 60 * 60 * 1000;
+          startMs - SlotBookingService.CANCEL_CUTOFF_HOURS * 60 * 60 * 1000;
         if (this.getISTNowMs() >= cancelDeadlineMs) {
           throw new BadRequestError(
             `Bookings can only be cancelled up to ${SlotBookingService.CANCEL_CUTOFF_HOURS} hour before the slot starts. ` +
@@ -412,7 +411,9 @@ export class SlotBookingService extends BaseService {
     const endMs = getISTMidnightUTC(addISTDays(to, 1));
     const rangeDays = (endMs - startMs) / (24 * 60 * 60 * 1000);
     if (rangeDays > 370) {
-      throw new BadRequestError('The learning calendar range cannot exceed 370 days.');
+      throw new BadRequestError(
+        'The learning calendar range cannot exceed 370 days.',
+      );
     }
 
     const [bookings, sessions] = await Promise.all([
@@ -424,11 +425,17 @@ export class SlotBookingService extends BaseService {
       ),
     ]);
 
-    const coursePairs = new Map<string, {courseId: string; courseVersionId: string}>();
+    const coursePairs = new Map<
+      string,
+      {courseId: string; courseVersionId: string}
+    >();
     for (const record of [...bookings, ...sessions]) {
       const courseId = String(record.courseId);
       const courseVersionId = String(record.courseVersionId);
-      coursePairs.set(courseId + ':' + courseVersionId, {courseId, courseVersionId});
+      coursePairs.set(courseId + ':' + courseVersionId, {
+        courseId,
+        courseVersionId,
+      });
     }
 
     const bookingFlags = await Promise.all(
