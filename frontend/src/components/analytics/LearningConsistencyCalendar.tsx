@@ -147,12 +147,87 @@ function dayStreak(days: CalendarDay[], today: string): number {
   return streak;
 }
 
+function buildLocalDemoCalendar(from: string, to: string): CalendarResponse {
+  const days: CalendarDay[] = [];
+  const start = new Date(from + "T00:00:00Z");
+  const end = new Date(to + "T00:00:00Z");
+  let totalLearningMinutes = 0;
+  let totalBookedMinutes = 0;
+  let totalUtilisedBookedMinutes = 0;
+  let totalNonBookedLearningMinutes = 0;
+
+  for (const cursor = new Date(start); cursor <= end; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+    const date = [
+      cursor.getUTCFullYear(),
+      String(cursor.getUTCMonth() + 1).padStart(2, "0"),
+      String(cursor.getUTCDate()).padStart(2, "0"),
+    ].join("-");
+    const dayNumber = cursor.getUTCDate();
+    const active = dayNumber % 4 !== 0 && dayNumber % 7 !== 0;
+    const bookedMinutes = active && dayNumber % 3 !== 0 ? 120 : 0;
+    const utilisedBookedMinutes = bookedMinutes ? Math.min(bookedMinutes, 65 + (dayNumber % 5) * 10) : 0;
+    const nonBookedLearningMinutes = active ? 20 + (dayNumber % 4) * 15 : 0;
+    const total = utilisedBookedMinutes + nonBookedLearningMinutes;
+    const level = total === 0 ? 0 : total < 60 ? 1 : total < 100 ? 2 : total < 150 ? 3 : 4;
+    totalLearningMinutes += total;
+    totalBookedMinutes += bookedMinutes;
+    totalUtilisedBookedMinutes += utilisedBookedMinutes;
+    totalNonBookedLearningMinutes += nonBookedLearningMinutes;
+    days.push({
+      date,
+      bookedMinutes,
+      utilisedBookedMinutes,
+      nonBookedLearningMinutes,
+      additionalLearningMinutes: 0,
+      totalLearningMinutes: total,
+      actualLearningMinutes: total,
+      bookedUtilizationPct: bookedMinutes ? Math.round((utilisedBookedMinutes / bookedMinutes) * 100) : 0,
+      intensityLevel: level,
+      bookings: bookedMinutes ? [{
+        bookingId: "demo-" + date,
+        courseId: "demo-course",
+        courseVersionId: "demo-version",
+        from: "18:00",
+        to: "20:00",
+        bookedMinutes,
+        utilisedMinutes: utilisedBookedMinutes,
+        utilizationPct: Math.round((utilisedBookedMinutes / bookedMinutes) * 100),
+        status: "FULFILLED",
+      }] : [],
+      nonBookedCourses: nonBookedLearningMinutes ? [{
+        courseId: "demo-course",
+        courseVersionId: "demo-version",
+        learningMinutes: nonBookedLearningMinutes,
+      }] : [],
+    });
+  }
+
+  return {
+    from,
+    to,
+    days,
+    summary: {
+      totalBookedMinutes,
+      totalUtilisedBookedMinutes,
+      totalNonBookedLearningMinutes,
+      totalLearningMinutes,
+      totalActualLearningMinutes: totalLearningMinutes,
+      activeDays: days.filter((day) => day.intensityLevel > 0).length,
+      averageSlotUtilizationPct: totalBookedMinutes
+        ? Math.round((totalUtilisedBookedMinutes / totalBookedMinutes) * 100)
+        : null,
+      currentStreak: 0,
+    },
+  };
+}
+
 export function LearningConsistencyCalendar({
   courseNames = {},
 }: {
   courseNames?: Record<string, string>;
 }) {
   const token = useAuthStore((state) => state.token);
+  const localDemo = import.meta.env.DEV && import.meta.env.VITE_CALENDAR_DEMO === "true";
   const [months, setMonths] = useState(12);
   const [selectedDate, setSelectedDate] = useState("");
   const today = istDateKey(new Date());
@@ -160,8 +235,9 @@ export function LearningConsistencyCalendar({
 
   const {data, isLoading, isError, error, refetch, isFetching} = useQuery<CalendarResponse>({
     queryKey: ["learning-consistency-calendar", from, today],
-    enabled: Boolean(token),
+    enabled: Boolean(token) || localDemo,
     queryFn: async () => {
+      if (localDemo) return buildLocalDemoCalendar(from, today);
       const baseUrl = String(import.meta.env.VITE_BASE_URL ?? "").replace(/\/$/, "");
       const response = await fetch(
         baseUrl + "/slot-bookings/my/calendar?from=" + from + "&to=" + today,
@@ -223,6 +299,7 @@ export function LearningConsistencyCalendar({
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             Daily booked-time utilisation and learning activity across your courses
+            {localDemo && <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800">Sample data · local demo</span>}
           </p>
         </div>
         <div className="flex w-fit items-center gap-1 rounded-lg bg-muted p-1">
@@ -266,7 +343,7 @@ export function LearningConsistencyCalendar({
             <RefreshCw className="h-4 w-4" /> Try again
           </button>
         </div>
-      ) : !token ? (
+      ) : !token && !localDemo ? (
         <p className="text-sm text-muted-foreground">Sign in to view your learning consistency.</p>
       ) : (
         <>
