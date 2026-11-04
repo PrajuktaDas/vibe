@@ -407,8 +407,10 @@ export function buildLearningCalendar(input: {
     (sum, day) => sum + day.nonBookedLearningMinutes,
     0,
   );
-  const totalLearningMinutes =
-    totalUtilisedBookedMinutes + totalNonBookedLearningMinutes;
+  const totalLearningMinutes = orderedDays.reduce(
+    (sum, day) => sum + day.totalLearningMinutes,
+    0,
+  );
   const totalActualLearningMinutes = orderedDays.reduce(
     (sum, day) => sum + day.actualLearningMinutes,
     0,
